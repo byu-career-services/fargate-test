@@ -1,0 +1,302 @@
+name: Deploy
+
+on:
+  push:
+    branches: [dev, stg, prd]
+env:
+  node_version: "18.x"
+  tf_version: "1.3.2" # must match value in terraform-iac/*/app/main.tf
+  FORCE_COLOR: 3
+concurrency: ${{ github.ref }}
+jobs:
+  env:
+    name: Set Env Vars
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up DEV Environment Variables
+        if: github.ref == 'refs/heads/dev'
+        run: |
+          matrix='{
+            "env":[
+              {
+                "environment_name":"dev",
+                "ecr_repo_name":"hw-fargate-api-dev",
+                "tf_working_dir":"./terraform-iac/dev/app",
+                "aws_key_name":"byu_oit_terraform_dev_key",
+                "aws_secret_name":"byu_oit_terraform_dev_secret",
+                "rfc_key_name":"standard_change_sandbox_client_key",
+                "rfc_secret_name":"standard_change_sandbox_client_secret",
+                "rfc_template_id":"Codepipeline-Standard-Change"
+              }
+            ]
+          }'
+          echo matrix=`echo $matrix | jq -c .` >> $GITHUB_ENV
+
+      - name: Set up STG Environment Variables
+        if: github.ref == 'refs/heads/stg'
+        run: |
+          matrix='{
+            "env":[
+              {
+                "environment_name":"stg",
+                "ecr_repo_name":"hw-fargate-api-stg",
+                "tf_working_dir":"./terraform-iac/stg/app",
+                "aws_key_name":"byu_oit_terraform_dev_key",
+                "aws_secret_name":"byu_oit_terraform_dev_secret",
+                "rfc_key_name":"standard_change_sandbox_client_key",
+                "rfc_secret_name":"standard_change_sandbox_client_secret",
+                "rfc_template_id":"Codepipeline-Standard-Change"
+              }
+            ]
+          }'
+          echo matrix=`echo $matrix | jq -c .` >> $GITHUB_ENV
+
+      - name: Set up PRD/CPY Environment Variables
+        if: github.ref == 'refs/heads/prd'
+        # TODO: When prd really is production, in prd environment (first block below):
+        # * Change standard_change_sandbox_client_key to standard_change_production_client_key
+        # * Change standard_change_sandbox_client_secret to standard_change_production_client_secret
+        # You probably don't want to do this in cpy (second block), or you will get two RFCs everytime you push to prd
+        run: |
+          matrix='{
+            "env":[
+              {
+                "environment_name":"prd",
+                "ecr_repo_name":"hw-fargate-api-prd",
+                "tf_working_dir":"./terraform-iac/prd/app",
+                "aws_key_name":"byu_oit_terraform_prd_key",
+                "aws_secret_name":"byu_oit_terraform_prd_secret",
+                "rfc_key_name":"standard_change_sandbox_client_key",
+                "rfc_secret_name":"standard_change_sandbox_client_secret",
+                "rfc_template_id":"Codepipeline-Standard-Change"
+              },
+              {
+                "environment_name":"cpy",
+                "ecr_repo_name":"hw-fargate-api-cpy",
+                "tf_working_dir":"./terraform-iac/cpy/app",
+                "aws_key_name":"byu_oit_terraform_prd_key",
+                "aws_secret_name":"byu_oit_terraform_prd_secret",
+                "rfc_key_name":"standard_change_sandbox_client_key",
+                "rfc_secret_name":"standard_change_sandbox_client_secret",
+                "rfc_template_id":"Codepipeline-Standard-Change"
+              }
+            ]
+          }'
+          echo matrix=`echo $matrix | jq -c .` >> $GITHUB_ENV
+
+    outputs:
+      matrix: ${{ env.matrix }}
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.node_version }}
+          cache: npm
+          cache-dependency-path: '**/package-lock.json'
+
+      - name: npm ci
+        working-directory: src
+        run: npm ci --prefer-offline
+
+      - name: npm test
+        working-directory: src
+        run: npm test
+
+      - name: Report test coverage to Codecov
+        uses: codecov/codecov-action@v3
+        if: env.CODECOV_TOKEN
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  audit:
+    name: Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.node_version }}
+
+      # We don't need to install deps to audit them
+
+      - name: npm audit
+        working-directory: src
+        run: npm audit --audit-level=critical
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.node_version }}
+          cache: npm
+          cache-dependency-path: '**/package-lock.json'
+
+      - name: npm ci
+        working-directory: src
+        run: npm ci --prefer-offline
+
+      - name: npm lint
+        working-directory: src
+        run: npm run lint
+
+  hadolint:
+    name: Lint Docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      # Hadolint follows semantic versioning, but doesn't have a @v2 release
+      - name: Lint Dockerfile
+        uses: hadolint/hadolint-action@v3.0.0
+        with:
+          dockerfile: src/Dockerfile
+
+  format:
+    name: Terraform Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Terraform Setup
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.tf_version }}
+
+      - name: Terraform Format
+        working-directory: terraform-iac
+        run: terraform fmt -check -recursive
+
+  build_and_deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+    needs: [env, test, audit, lint, hadolint, format]
+    strategy:
+      matrix: ${{ fromJson(needs.env.outputs.matrix) }}
+      fail-fast: false
+    environment:
+      name: ${{ matrix.env.environment_name }}
+      url: https://${{ steps.terraform-outputs.outputs.url }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets[matrix.env.aws_key_name] }}
+          aws-secret-access-key: ${{ secrets[matrix.env.aws_secret_name] }}
+          aws-region: us-west-2
+
+      - name: Log into Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Get Current Timestamp
+        id: date
+        run: echo "timestamp=$(date +'%Y-%m-%d_%H-%M-%S')" >> $GITHUB_OUTPUT
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+        with:
+          platforms: arm64
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build and push the Docker image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPO: ${{ matrix.env.ecr_repo_name }}
+          IMAGE_TAG: ${{ steps.date.outputs.timestamp }}
+        uses: docker/build-push-action@v3
+        with:
+          context: src
+          platforms: linux/arm64
+          push: true
+          tags: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPO}}:${{ env.IMAGE_TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Terraform Setup
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.tf_version }}
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        working-directory: ${{ matrix.env.tf_working_dir }}
+        run: terraform init
+
+      - name: Terraform Plan
+        working-directory: ${{ matrix.env.tf_working_dir }}
+        run: terraform plan -var 'image_tag=${{ steps.date.outputs.timestamp }}' -input=false -out=plan
+
+      - name: Analyze Terraform Plan
+        uses: byu-oit/github-action-tf-plan-analyzer@v2
+        if: github.repository_owner == 'byu-oit'
+        # If you're at BYU, but outside the byu-oit GitHub org, you may be able to obtain credentials by contacting cloudoffice@byu.edu
+        with:
+          working-directory: ${{ matrix.env.tf_working_dir }}
+          terraform-plan-file: plan
+          divvycloud-username: ${{ secrets.DIVVYCLOUD_USERNAME }}
+          divvycloud-password: ${{ secrets.DIVVYCLOUD_PASSWORD }}
+
+      - name: Start Standard Change
+        uses: byu-oit/github-action-start-standard-change@v1
+        id: start-standard-change
+        with:
+          client-key: ${{ secrets[matrix.env.rfc_key_name] }}
+          client-secret: ${{ secrets[matrix.env.rfc_secret_name] }}
+          template-id: ${{ matrix.env.rfc_template_id }}
+
+      - name: Terraform Apply
+        working-directory: ${{ matrix.env.tf_working_dir }}
+        run: terraform apply plan
+
+      - name: Get Terraform Outputs
+        id: terraform-outputs
+        working-directory: ${{ matrix.env.tf_working_dir }}
+        run: |
+          echo "codedeploy_app_name=$(terraform output -raw codedeploy_app_name)" >> $GITHUB_OUTPUT
+          echo "codedeploy_deployment_group_name=$(terraform output -raw codedeploy_deployment_group_name)" >> $GITHUB_OUTPUT
+          echo "codedeploy_appspec_json_file=$(terraform output -raw codedeploy_appspec_json_file)" >> $GITHUB_OUTPUT
+          echo "url=$(terraform output -raw url)" >> $GITHUB_OUTPUT
+
+      - name: CodeDeploy
+        id: deploy
+        uses: byu-oit/github-action-codedeploy@v2
+        with:
+          application-name: ${{ steps.terraform-outputs.outputs.codedeploy_app_name }}
+          deployment-group-name: ${{ steps.terraform-outputs.outputs.codedeploy_deployment_group_name }}
+          appspec-file: ${{ steps.terraform-outputs.outputs.codedeploy_appspec_json_file }}
+
+      - name: End Standard Change
+        uses: byu-oit/github-action-end-standard-change@v1
+        if: always() && steps.start-standard-change.outcome == 'success' # Run if RFC started, even if the deploy failed
+        with:
+          client-key: ${{ secrets[matrix.env.rfc_key_name] }}
+          client-secret: ${{ secrets[matrix.env.rfc_secret_name] }}
+          change-sys-id: ${{ steps.start-standard-change.outputs.change-sys-id }}
+          work-start: ${{ steps.start-standard-change.outputs.work-start }}
+          success: ${{ job.status == 'success' }}
+
+      - name: Teams Notification
+        uses: byu-oit/github-action-teams@v3
+        if: always()
+        with:
+          status: ${{ job.status }}
+          webhook-url: ${{ secrets.MS_TEAMS_WEBHOOK_URL }}
