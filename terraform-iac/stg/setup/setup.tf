@@ -1,9 +1,9 @@
 terraform {
   required_version = "1.3.2"
   backend "s3" {
-    bucket         = "terraform-state-storage-977306314792"
-    dynamodb_table = "terraform-state-lock-977306314792"
-    key            = "hw-fargate-api/stg/setup.tfstate"
+    bucket         = "terraform-state-storage-267223774717"
+    dynamodb_table = "terraform-state-lock-267223774717"
+    key            = "fargate-test/stg/setup.tfstate"
     region         = "us-west-2"
   }
   required_providers {
@@ -23,7 +23,7 @@ provider "aws" {
 
   default_tags {
     tags = {
-      repo                   = "https://github.com/byu-oit/hw-fargate-api"
+      repo                   = "https://github.com/byu-oit/fargate-test"
       data-sensitivity       = "public"
       env                    = local.env
       resource-creator-email = "GitHub-Actions"

@@ -1,7 +1,7 @@
 {
 	"info": {
 		"_postman_id": "868867bc-aac9-428b-9743-164cf7acfecf",
-		"name": "hw-fargate-api",
+		"name": "fargate-test",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
@@ -33,12 +33,8 @@
 				},
 				"url": {
 					"raw": "{{context}}/health",
-					"host": [
-						"{{context}}"
-					],
-					"path": [
-						"health"
-					]
+					"host": ["{{context}}"],
+					"path": ["health"]
 				}
 			},
 			"response": []
@@ -61,12 +57,12 @@
 							"pm.test(\"Table name is correct\", function () {",
 							"    var jsonData = pm.response.json();",
 							"    var env = pm.variables.get(\"env\");",
-							"    pm.expect(jsonData.table).to.eql(`hw-fargate-api-${env}`);",
+							"    pm.expect(jsonData.table).to.eql(`fargate-test-${env}`);",
 							"});",
 							"pm.test(\"Bucket name is correct\", function () {",
 							"    var jsonData = pm.response.json();",
 							"    var env = pm.variables.get(\"env\");",
-							"    pm.expect(jsonData.bucket).to.eql(`hw-fargate-api-${env}`);",
+							"    pm.expect(jsonData.bucket).to.eql(`fargate-test-${env}`);",
 							"});"
 						],
 						"type": "text/javascript"
@@ -82,12 +78,8 @@
 				},
 				"url": {
 					"raw": "{{context}}/",
-					"host": [
-						"{{context}}"
-					],
-					"path": [
-						""
-					]
+					"host": ["{{context}}"],
+					"path": [""]
 				}
 			},
 			"response": []

@@ -23,7 +23,7 @@ variable "log_retention_days" {
 }
 
 locals {
-  name = "hw-fargate-api"
+  name = "fargate-test"
   env  = var.env
 }
 

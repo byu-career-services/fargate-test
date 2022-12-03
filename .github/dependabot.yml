@@ -6,6 +6,8 @@ updates:
     schedule:
       interval: daily
     target-branch: dev
+    reviewers:
+      - 'mfteusher'
 
   - package-ecosystem: docker
     directory: '/src'
@@ -22,17 +24,17 @@ updates:
       interval: daily
     target-branch: dev
 
-#  - package-ecosystem: terraform
-#    directory: '/terraform-iac/dev/app'
-#    schedule:
-#      interval: daily
-#    target-branch: dev
+  #  - package-ecosystem: terraform
+  #    directory: '/terraform-iac/dev/app'
+  #    schedule:
+  #      interval: daily
+  #    target-branch: dev
 
-#  - package-ecosystem: terraform
-#    directory: '/terraform-iac/dev/setup'
-#    schedule:
-#      interval: daily
-#    target-branch: dev
+  #  - package-ecosystem: terraform
+  #    directory: '/terraform-iac/dev/setup'
+  #    schedule:
+  #      interval: daily
+  #    target-branch: dev
 
   - package-ecosystem: terraform
     directory: '/terraform-iac/modules/app'
@@ -45,7 +47,6 @@ updates:
     schedule:
       interval: daily
     target-branch: dev
-
 # For each of these, requesting reviews from your team makes Dependabot PRs easier to find (https://github.com/pulls/review-requested)
 #   reviewers:
 #     - byu-oit/your-github-team

@@ -4,8 +4,8 @@ on:
   push:
     branches: [dev, stg, prd]
 env:
-  node_version: "18.x"
-  tf_version: "1.3.2" # must match value in terraform-iac/*/app/main.tf
+  node_version: '18.x'
+  tf_version: '1.3.2' # must match value in terraform-iac/*/app/main.tf
   FORCE_COLOR: 3
 concurrency: ${{ github.ref }}
 jobs:
@@ -20,10 +20,10 @@ jobs:
             "env":[
               {
                 "environment_name":"dev",
-                "ecr_repo_name":"hw-fargate-api-dev",
+                "ecr_repo_name":"fargate-test-dev",
                 "tf_working_dir":"./terraform-iac/dev/app",
-                "aws_key_name":"byu_oit_terraform_dev_key",
-                "aws_secret_name":"byu_oit_terraform_dev_secret",
+                "aws_key_name":"byu_dept_capstone3_dev_key",
+                "aws_secret_name":"byu_dept_capstone3_dev_secret",
                 "rfc_key_name":"standard_change_sandbox_client_key",
                 "rfc_secret_name":"standard_change_sandbox_client_secret",
                 "rfc_template_id":"Codepipeline-Standard-Change"
@@ -39,10 +39,10 @@ jobs:
             "env":[
               {
                 "environment_name":"stg",
-                "ecr_repo_name":"hw-fargate-api-stg",
+                "ecr_repo_name":"fargate-test-stg",
                 "tf_working_dir":"./terraform-iac/stg/app",
-                "aws_key_name":"byu_oit_terraform_dev_key",
-                "aws_secret_name":"byu_oit_terraform_dev_secret",
+                "aws_key_name":"byu_dept_capstone3_dev_key",
+                "aws_secret_name":"byu_dept_capstone3_dev_secret",
                 "rfc_key_name":"standard_change_sandbox_client_key",
                 "rfc_secret_name":"standard_change_sandbox_client_secret",
                 "rfc_template_id":"Codepipeline-Standard-Change"
@@ -62,7 +62,7 @@ jobs:
             "env":[
               {
                 "environment_name":"prd",
-                "ecr_repo_name":"hw-fargate-api-prd",
+                "ecr_repo_name":"fargate-test-prd",
                 "tf_working_dir":"./terraform-iac/prd/app",
                 "aws_key_name":"byu_oit_terraform_prd_key",
                 "aws_secret_name":"byu_oit_terraform_prd_secret",
@@ -72,7 +72,7 @@ jobs:
               },
               {
                 "environment_name":"cpy",
-                "ecr_repo_name":"hw-fargate-api-cpy",
+                "ecr_repo_name":"fargate-test-cpy",
                 "tf_working_dir":"./terraform-iac/cpy/app",
                 "aws_key_name":"byu_oit_terraform_prd_key",
                 "aws_secret_name":"byu_oit_terraform_prd_secret",

@@ -7,7 +7,7 @@ variable "some_secret" {
 }
 
 locals {
-  name = "hw-fargate-api"
+  name = "fargate-test"
 }
 
 resource "aws_ssm_parameter" "some_secret" {

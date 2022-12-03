@@ -1,9 +1,9 @@
 terraform {
   required_version = "1.3.2"
   backend "s3" {
-    bucket         = "terraform-state-storage-977306314792"
-    dynamodb_table = "terraform-state-lock-977306314792"
-    key            = "hw-fargate-api/stg/app.tfstate"
+    bucket         = "terraform-state-storage-267223774717"
+    dynamodb_table = "terraform-state-lock-267223774717"
+    key            = "fargate-test/stg/app.tfstate"
     region         = "us-west-2"
   }
   required_providers {
@@ -26,7 +26,7 @@ provider "aws" {
   region = "us-west-2"
   default_tags {
     tags = {
-      repo                   = "https://github.com/byu-oit/hw-fargate-api"
+      repo                   = "https://github.com/byu-oit/fargate-test"
       data-sensitivity       = "public"
       env                    = local.env
       resource-creator-email = "GitHub-Actions"
@@ -43,7 +43,7 @@ module "app" {
   env                              = local.env
   image_tag                        = var.image_tag
   codedeploy_termination_wait_time = 0
-  deploy_test_postman_collection   = "../../../.postman/hw-fargate-api.postman_collection.json"
+  deploy_test_postman_collection   = "../../../.postman/fargate-test.postman_collection.json"
   deploy_test_postman_environment  = "../../../.postman/stg-tst.postman_environment.json"
   log_retention_days               = 1
 }
